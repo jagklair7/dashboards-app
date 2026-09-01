@@ -1,4 +1,4 @@
-# Klair Dashboards
+# Klair Dashboard
 
 Standalone BI dashboard product — the "Custom Dashboards" offering advertised
 on klair.ca. Own repo, own Supabase project, own Vercel deploy. Does **not**
