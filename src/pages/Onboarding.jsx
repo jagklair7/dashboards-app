@@ -29,7 +29,7 @@ export default function Onboarding() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <div className="auth-logo">Klair Dashboards</div>
+        <div className="auth-logo">Klair Dashboard</div>
         <h1>Set up your organization</h1>
         <form onSubmit={handleCreate}>
           <label>

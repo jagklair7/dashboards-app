@@ -8,7 +8,7 @@ export default function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-logo">Klair Dashboards</div>
+      <div className="sidebar-logo">Klair Dashboard</div>
 
       {orgs.length > 1 ? (
         <select
@@ -23,7 +23,7 @@ export default function Sidebar() {
       )}
 
       <nav className="sidebar-nav">
-        <NavLink to="/dashboards" className={({ isActive }) => isActive ? 'active' : ''}>Dashboards</NavLink>
+        <NavLink to="/dashboards" className={({ isActive }) => isActive ? 'active' : ''}>Dashboard</NavLink>
         <NavLink to="/data-sources" className={({ isActive }) => isActive ? 'active' : ''}>Data Sources</NavLink>
       </nav>
 

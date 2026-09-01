@@ -33,7 +33,7 @@ export default function Login() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <div className="auth-logo">Klair Dashboards</div>
+        <div className="auth-logo">Klair Dashboard</div>
         <h1>{mode === 'signin' ? 'Sign in' : 'Create an account'}</h1>
         <form onSubmit={handleSubmit}>
           <label>
