@@ -15,6 +15,13 @@ const CONNECTORS = {
  * the normalized metrics into synced_data. Call this on a schedule
  * (e.g. a Vercel cron hitting a serverless function) or on-demand from
  * a "Sync now" button.
+ *
+ * Upserts on (data_source_id, metric_key, dimension, recorded_at) — see
+ * the synced_data_unique_metric constraint — so re-running a sync updates
+ * existing snapshot rows instead of duplicating them. This requires
+ * dimension to never be null (use '' for "no dimension"); a nullable
+ * dimension would defeat the constraint since Postgres treats every NULL
+ * as distinct.
  */
 export async function syncDataSource(dataSource) {
   const connector = CONNECTORS[dataSource.type]
@@ -29,12 +36,14 @@ export async function syncDataSource(dataSource) {
       data_source_id: dataSource.id,
       org_id: dataSource.org_id,
       metric_key: m.metric_key,
-      dimension: m.dimension ?? null,
+      dimension: m.dimension ?? '',
       value: m.value,
       recorded_at: m.recorded_at,
       raw: m.raw ?? null,
     }))
-    const { error } = await supabase.from('synced_data').insert(rows)
+    const { error } = await supabase
+      .from('synced_data')
+      .upsert(rows, { onConflict: 'data_source_id,metric_key,dimension,recorded_at' })
     if (error) throw error
   }
 

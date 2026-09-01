@@ -22,6 +22,7 @@ export default function DataSources() {
   const [newType, setNewType] = useState('invoicing')
   const [newLabel, setNewLabel] = useState('')
   const [newConfigId, setNewConfigId] = useState('') // invoicingOrgId / hotelOrgId
+  const [newApiKey, setNewApiKey] = useState('')
   const [creating, setCreating] = useState(false)
 
   useEffect(() => { if (activeOrg?.orgId) fetchSources() }, [activeOrg?.orgId])
@@ -41,8 +42,8 @@ export default function DataSources() {
     e.preventDefault()
     if (!newLabel.trim()) return
     setCreating(true)
-    const config = newType === 'invoicing' ? { invoicingOrgId: newConfigId }
-      : newType === 'hotel_tv' ? { hotelOrgId: newConfigId }
+    const config = newType === 'invoicing' ? { invoicingOrgId: newConfigId, apiKey: newApiKey }
+      : newType === 'hotel_tv' ? { hotelOrgId: newConfigId, apiKey: newApiKey }
       : {}
     await supabase.from('data_sources').insert([{
       org_id: activeOrg.orgId,
@@ -50,7 +51,7 @@ export default function DataSources() {
       label: newLabel.trim(),
       config,
     }])
-    setNewLabel(''); setNewConfigId('')
+    setNewLabel(''); setNewConfigId(''); setNewApiKey('')
     setCreating(false)
     fetchSources()
   }
@@ -145,11 +146,19 @@ export default function DataSources() {
         </select>
         <input placeholder="Label (e.g. Klair Invoicing)" value={newLabel} onChange={e => setNewLabel(e.target.value)} />
         {newType !== 'csv_upload' && (
-          <input
-            placeholder={newType === 'invoicing' ? 'invoicingOrgId' : 'hotelOrgId'}
-            value={newConfigId}
-            onChange={e => setNewConfigId(e.target.value)}
-          />
+          <>
+            <input
+              placeholder={newType === 'invoicing' ? 'invoicingOrgId' : 'hotelOrgId'}
+              value={newConfigId}
+              onChange={e => setNewConfigId(e.target.value)}
+            />
+            <input
+              type="password"
+              placeholder="API key"
+              value={newApiKey}
+              onChange={e => setNewApiKey(e.target.value)}
+            />
+          </>
         )}
         <button type="submit" disabled={creating || !newLabel.trim()}>+ Add source</button>
       </form>
