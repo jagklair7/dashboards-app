@@ -88,6 +88,24 @@ export async function fetchMetrics(config) {
     raw: null,
   })
 
+  // A/R aging — one row per bucket, summed from the endpoint's
+  // per-invoice aging_bucket field. Only invoices with a non-null bucket
+  // count (i.e. sent + overdue); paid/draft/void/not-yet-due are excluded.
+  const bucketTotals = new Map()
+  for (const inv of payload.invoices || []) {
+    if (!inv.aging_bucket) continue
+    bucketTotals.set(inv.aging_bucket, (bucketTotals.get(inv.aging_bucket) || 0) + (Number(inv.total) || 0))
+  }
+  for (const [bucket, total] of bucketTotals) {
+    metrics.push({
+      metric_key: 'ar_aging',
+      dimension: bucket,
+      value: total,
+      recorded_at: today,
+      raw: null,
+    })
+  }
+
   return metrics
 }
 

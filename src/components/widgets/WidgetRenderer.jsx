@@ -36,6 +36,15 @@ export default function WidgetRenderer({ widget }) {
   if (error) return <div className="widget widget--error">Couldn't load "{widget.title}": {error}</div>
   if (rows === null) return <div className="widget widget--loading">Loading…</div>
 
+  // When widget.config.xAxis === 'dimension', the chart groups by category
+  // (e.g. an aging bucket, a client name) instead of by date — used for
+  // any metric that's a snapshot broken into groups rather than a time
+  // series. Sorting alphabetically by dimension is intentional: for
+  // aging buckets specifically, labels ('0-30', '31-60', '61-90', '90+')
+  // are chosen so alphabetical order is also the correct chronological
+  // order, with no extra sort-order field needed.
+  const useDimensionAxis = widget.config?.xAxis === 'dimension'
+
   switch (widget.type) {
     case 'kpi': {
       const total = rows.reduce((s, r) => s + Number(r.value || 0), 0)
@@ -43,8 +52,13 @@ export default function WidgetRenderer({ widget }) {
     }
     case 'line_chart':
     case 'bar_chart': {
-      const chartData = rows.map(r => ({
-        label: new Date(r.recorded_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }),
+      const sortedRows = useDimensionAxis
+        ? [...rows].sort((a, b) => (a.dimension || '').localeCompare(b.dimension || ''))
+        : rows
+      const chartData = sortedRows.map(r => ({
+        label: useDimensionAxis
+          ? (r.dimension || '—')
+          : new Date(r.recorded_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }),
         value: Number(r.value || 0),
       }))
       return <ChartWidget title={widget.title} type={widget.type === 'bar_chart' ? 'bar' : 'line'} data={chartData} />
