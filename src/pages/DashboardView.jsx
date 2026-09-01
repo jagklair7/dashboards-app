@@ -4,6 +4,8 @@ import { supabase } from '../app/supabaseClient'
 import { useOrg } from '../context/OrgContext'
 import WidgetRenderer from '../components/widgets/WidgetRenderer'
 
+console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL)
+
 export default function DashboardView() {
   const { slug } = useParams()
   const { activeOrg } = useOrg()
