@@ -4,8 +4,6 @@ import { supabase } from '../app/supabaseClient'
 import { useOrg } from '../context/OrgContext'
 import WidgetRenderer from '../components/widgets/WidgetRenderer'
 
-console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL)
-
 export default function DashboardView() {
   const { slug } = useParams()
   const { activeOrg } = useOrg()
@@ -39,6 +37,8 @@ export default function DashboardView() {
   if (loading) return <div className="loading-spinner" />
   if (!dashboard) return <div className="empty-state">Dashboard not found.</div>
 
+  console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL)
+ 
   return (
     <div className="page">
       <div className="page-header">
