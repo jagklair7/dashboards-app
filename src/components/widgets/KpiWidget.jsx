@@ -1,5 +1,9 @@
 export default function KpiWidget({ title, value, unit, trend }) {
-  const formatted = typeof value === 'number' ? value.toLocaleString('en-CA') : value
+  const formatted = typeof value === 'number'
+    ? (unit === 'currency'
+        ? value.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : value.toLocaleString('en-CA'))
+    : value
 
   return (
     <div className="widget widget--kpi">
