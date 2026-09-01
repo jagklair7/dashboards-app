@@ -3,8 +3,6 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../app/supabaseClient'
 import { useOrg } from '../context/OrgContext'
 
-console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL)
-
 export default function DashboardsList() {
   const { activeOrg } = useOrg()
   const [dashboards, setDashboards] = useState([])
