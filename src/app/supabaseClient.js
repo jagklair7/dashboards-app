@@ -19,4 +19,3 @@ export const supabase = createClient(
       detectSessionInUrl: true,
     }
   })
-
