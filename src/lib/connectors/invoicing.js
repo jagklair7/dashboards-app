@@ -114,3 +114,4 @@ export async function fetchMetrics(config) {
 }
 
 export const type = 'invoicing'
+export const snapshotMetricKeys = ['ar_aging', 'top_clients', 'overdue_invoices', 'active_orgs']
