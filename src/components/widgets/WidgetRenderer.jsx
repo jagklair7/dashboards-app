@@ -20,7 +20,7 @@ export default function WidgetRenderer({ widget }) {
       if (!widget.metric_key) { setRows([]); return }
       const { data, error } = await supabase
         .from('synced_data')
-        .select('value, dimension, recorded_at')
+        .select('value, dimension, recorded_at, raw')
         .eq('org_id', widget.org_id)
         .eq('metric_key', widget.metric_key)
         .order('recorded_at', { ascending: true })
@@ -45,12 +45,10 @@ export default function WidgetRenderer({ widget }) {
   // order, with no extra sort-order field needed.
   const useDimensionAxis = widget.config?.xAxis === 'dimension'
 
-  // The overdue_invoices metric packs "INV-1023 · Acme Corp · 32d overdue"
-  // into `dimension` (see invoicingConnector.js buildOverdueRows) because
-  // synced_data has no columns for invoice number / client name
-  // separately. Unpack it here so the table shows real columns instead of
-  // one crowded string — this parsing is intentionally scoped to this one
-  // metric_key, not a general table feature.
+  // top_clients uses customer_id as dimension (stable upsert key) with the
+  // display name in raw — fall back to dimension itself if raw is missing
+  // (e.g. rows synced before this change).
+  const isTopClients = widget.metric_key === 'top_clients'
   const isOverdueInvoices = widget.metric_key === 'overdue_invoices'
 
   switch (widget.type) {
@@ -65,7 +63,7 @@ export default function WidgetRenderer({ widget }) {
         : rows
       const chartData = sortedRows.map(r => ({
         label: useDimensionAxis
-          ? (r.dimension || '—')
+          ? (isTopClients ? (r.raw?.client_name || r.dimension || '—') : (r.dimension || '—'))
           : new Date(r.recorded_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }),
         value: Number(r.value || 0),
       }))
@@ -79,18 +77,20 @@ export default function WidgetRenderer({ widget }) {
           { key: 'days_overdue', label: 'Days Overdue' },
           { key: 'amount', label: 'Amount' },
         ]
-        // dimension format: "INV-1023 · Acme Corp · 32d overdue" — split on
-        // the same " · " separator the connector joins with. If a segment
-        // is missing (unexpected data), fall back to '—' rather than
-        // throwing, since a malformed row shouldn't break the whole table.
+        // Days overdue computed live from raw.due_date at render time —
+        // never stored, so it's always accurate and never a sync/upsert
+        // concern (see invoicingConnector notes on why baking a
+        // daily-changing value into dimension broke upserts).
+        const today = new Date()
         const tableRows = [...rows]
           .sort((a, b) => Number(b.value || 0) - Number(a.value || 0))
           .map(r => {
-            const [invoiceNumber, clientName, overdueLabel] = (r.dimension || '').split(' · ')
+            const dueDate = r.raw?.due_date ? new Date(r.raw.due_date) : null
+            const daysOverdue = dueDate ? Math.floor((today - dueDate) / 86400000) : null
             return {
-              invoice_number: invoiceNumber || '—',
-              client_name: clientName || '—',
-              days_overdue: overdueLabel ? overdueLabel.replace('d overdue', '') : '—',
+              invoice_number: r.raw?.invoice_number || r.dimension || '—',
+              client_name: r.raw?.client_name || '—',
+              days_overdue: daysOverdue !== null ? daysOverdue : '—',
               amount: Number(r.value || 0).toLocaleString('en-CA', { style: 'currency', currency: 'CAD' }),
             }
           })
