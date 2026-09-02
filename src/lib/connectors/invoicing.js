@@ -59,31 +59,43 @@ export async function fetchMetrics(config) {
     metrics.push({ metric_key: 'ar_aging', dimension: bucket, value: total, recorded_at: SNAPSHOT_DATE, raw: null })
   }
 
-  // --- Top clients by paid revenue — snapshot, top 5 rows ---
-  const byClient = new Map()
-  for (const inv of payload.invoices || []) {
-    if (inv.status !== 'paid') continue
-    const name = inv.customer_name || 'Unknown'
-    byClient.set(name, (byClient.get(name) || 0) + (Number(inv.total) || 0))
-  }
-  const topClients = [...byClient.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
-  for (const [name, total] of topClients) {
-    metrics.push({ metric_key: 'top_clients', dimension: name, value: total, recorded_at: SNAPSHOT_DATE, raw: null })
-  }
+    // --- Top clients by paid revenue — snapshot, top 5 rows ---
+    // dimension = customer_id (stable) so re-syncing always upserts onto the
+    // same row even if the display name changes; raw carries the name for
+    // display so WidgetRenderer never needs to parse anything.
+    const byClient = new Map() // customer_id -> { name, total }
+    for (const inv of payload.invoices || []) {
+      if (inv.status !== 'paid') continue
+      const id = inv.customer_id || 'unknown'
+      const entry = byClient.get(id) || { name: inv.customer_name || 'Unknown', total: 0 }
+      entry.total += Number(inv.total) || 0
+      byClient.set(id, entry)
+    }
+    const topClients = [...byClient.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, 5)
+    for (const [customerId, { name, total }] of topClients) {
+      metrics.push({
+        metric_key: 'top_clients',
+        dimension: customerId,
+        value: total,
+        recorded_at: SNAPSHOT_DATE,
+        raw: { client_name: name },
+      })
+    }
+
 
   // --- Overdue invoices — snapshot, one row per currently-overdue invoice ---
-  // dimension packs "INV-1023 · Acme Corp · 32d overdue" since synced_data
-  // has no separate columns for invoice number/client — WidgetRenderer
-  // parses this string back apart for the table's columns.
+  // dimension = invoice number (stable, unique). raw carries client name and
+  // due_date; WidgetRenderer computes "days overdue" live from due_date at
+  // render time rather than freezing it here — that number changes daily,
+  // so baking it into dimension would break the upsert key every single day.
   const overdueInvoices = (payload.invoices || []).filter(inv => inv.is_overdue)
   for (const inv of overdueInvoices) {
-    const daysOverdue = Math.floor((new Date() - new Date(inv.due_date)) / 86400000)
     metrics.push({
       metric_key: 'overdue_invoices',
-      dimension: `${inv.number} · ${inv.customer_name || 'Unknown'} · ${daysOverdue}d overdue`,
+      dimension: inv.number,
       value: Number(inv.total) || 0,
       recorded_at: SNAPSHOT_DATE,
-      raw: null,
+      raw: { client_name: inv.customer_name || 'Unknown', due_date: inv.due_date, invoice_number: inv.number },
     })
   }
 
